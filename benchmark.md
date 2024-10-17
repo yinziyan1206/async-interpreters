@@ -1,7 +1,6 @@
 # BENCHMARK
 
-## CODE
-
+**CODE**
 ```python
 
 import asyncio
@@ -49,8 +48,11 @@ async def benchmark():
     print("subinterpreters(with asyncio)", time.perf_counter() - t)
 
 ```
-
+---
+**RESULT**
 > thread 2.4889633000129834
+>
 > process 1.1637972999888007
+>
 > subinterpreters(with asyncio) 0.4967340999864973
 >
