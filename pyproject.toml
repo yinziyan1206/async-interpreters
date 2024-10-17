@@ -12,7 +12,7 @@ authors = [
     { name = "ziyan.yin",  email = "408856732@qq.com"}
 ]
 classifiers = [
-    "Development Status :: 1 - Alpha",
+    "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
