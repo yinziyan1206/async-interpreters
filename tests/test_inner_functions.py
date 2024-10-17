@@ -3,7 +3,7 @@ __date__ = "2024-10-16"
 
 import pytest
 
-from tests import  calc_add, workers
+from tests import calc_add, workers
 
 
 @pytest.mark.asyncio
@@ -16,7 +16,7 @@ async def test_inner_method():
             sum += i
         return sum
 
-    ret = await workers.run_sync(calc_add_local, 100, locals={"a": 5})
+    ret = await workers.run_sync(calc_add_local, 100)
     assert ret == 4955
 
 
@@ -27,5 +27,5 @@ async def test_inner_method_2():
     def calc_add_local(b):
         return calc_add(a, b)
 
-    ret = await workers.run_sync(calc_add_local, 100, locals={"a": 5})
+    ret = await workers.run_sync(calc_add_local, 100)
     assert ret == 4955

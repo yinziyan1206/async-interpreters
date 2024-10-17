@@ -2,7 +2,6 @@ __author__ = "ziyan.yin"
 __date__ = "2024-10-16"
 
 import asyncio
-import inspect
 import os
 import pickle
 import sys
@@ -10,12 +9,11 @@ import threading
 from collections import deque
 from collections.abc import Callable
 from pathlib import Path
-from textwrap import dedent as D
-from types import FunctionType, ModuleType
 from typing import Any
 
 from test.support import interpreters
 
+from async_interpreters import utils
 from async_interpreters.data import FunctionStructure
 from async_interpreters.params import CALL_CODE, ENV_CODE, SHARED_TYPES
 
@@ -37,55 +35,21 @@ class Worker:
     def _init_interpreter(self) -> None:
         self.run_string(ENV_CODE, _cid=self.sender.id)
     
-    def import_func(self, func: Callable, locals: dict | None) -> None:
+    def import_func(self, func: Callable) -> None:
         main_module = sys.modules["__main__"]
         main_module_name = Path(getattr(main_module, "__file__", "")).stem
         importers = [f"import {main_module_name} as __main__"]
         
-        if func.__module__ != "__main__":
-            importers.append(f"import {func.__module__}")
-            funcion_mod = __import__(func.__module__)
-        else:
-            funcion_mod = __import__(main_module_name)
-        
-        if locals:
-            for name, obj in locals.items():
-                importers.append(f"{name} = pickle.loads({pickle.dumps(obj)})")  # type: ignore
-        
-        if isinstance(func, FunctionType):
-            if getattr(funcion_mod, func.__name__, None):
-                raw_func = f"getattr({func.__module__}, '{func.__name__}', None)"
-            else:
-                func_source = D(inspect.getsource(func))
-                caller_structures = func_source.splitlines()
-
-                for name, obj in inspect.getmembers(funcion_mod):
-                    if isinstance(obj, ModuleType) and obj.__name__ != "builtins":
-                        importers.append(f"import {obj.__name__}")
-                        importers.append(f"{name} = {obj.__name__}")
-                    elif isinstance(obj, FunctionType) and obj != func and obj.__module__ != "builtins":
-                        if func.__module__ != obj.__module__:
-                            importers.append(f"from {obj.__module__} import {obj.__name__}")
-                            importers.append(f"{name} = {obj.__name__}")
-                        else:
-                            func_source = D(inspect.getsource(obj))
-                            caller_structures.extend(func_source.splitlines())
-                    elif not name.startswith("__") and not name.startswith("@"):
-                        importers.append(f"{name} = getattr({func.__module__}, '{name}', None)")
-
-                importers.extend(caller_structures)
-                raw_func = func.__name__
-        else:
-            raw_func = f"pickle.loads({pickle.dumps(func)})"  # type: ignore
-        
+        importers.extend(utils.load_func(func))
+            
         self.raw_func = CALL_CODE.format(
-            importer="\n    ".join(importers), 
-            raw_func=raw_func
+            importer="\n    ".join(importers)
         )
         
     def execute(self, *args: Any, **kwds: Any) -> Any:
         try:
             if self.raw_func:
+                print(self.raw_func)
                 self.run_string(self.raw_func)
                 self.raw_func = None
             shared = {
@@ -142,11 +106,11 @@ class WorkersPool:
     def is_empty(self) -> bool:
         return len(self._pool) == 0
     
-    async def run_sync(self, func: Callable, *args: Any, locals: dict | None = None, **kwds: Any) -> Any:
+    async def run_sync(self, func: Callable, *args: Any, **kwds: Any) -> Any:
         while self.is_empty:
             await asyncio.sleep(0.01)
         worker = self._pool.popleft()
-        worker.import_func(func, locals)
+        worker.import_func(func)
         res = await worker(*args, **kwds)
         self._pool.append(worker)
         return res

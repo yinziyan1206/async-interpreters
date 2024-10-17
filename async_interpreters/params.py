@@ -8,9 +8,11 @@ SHARED_TYPES = None | str | int | bool | float | bytes
 
 ENV_CODE = D(
     f"""
+    import marshal
     import pickle
     import sys
     from test.support import interpreters
+    from types import FunctionType
     
     sys.path[:] = {sys.path}
     
@@ -26,8 +28,8 @@ ENV_CODE = D(
 CALL_CODE = D(
     """
     def _run(raw_data):
+        closure = None
         {importer}
-        func = {raw_func}
         _call(func, raw_data)
     """
 )
