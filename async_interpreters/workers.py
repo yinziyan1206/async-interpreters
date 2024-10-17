@@ -49,7 +49,6 @@ class Worker:
     def execute(self, *args: Any, **kwds: Any) -> Any:
         try:
             if self.raw_func:
-                print(self.raw_func)
                 self.run_string(self.raw_func)
                 self.raw_func = None
             shared = {
