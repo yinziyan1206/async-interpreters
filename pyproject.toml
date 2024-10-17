@@ -1,0 +1,87 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "async-interpreters"
+dynamic = ["version"]
+description = "subinterpreters for asyncio."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name = "ziyan.yin",  email = "408856732@qq.com"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+]
+
+[project.optional-dependencies]
+standard = [
+    "colorama>=0.4;sys_platform == 'win32'",
+    "httptools>=0.5.0",
+    "python-dotenv>=0.13",
+    "PyYAML>=5.1",
+    "uvloop>=0.14.0,!=0.15.0,!=0.15.1; sys_platform != 'win32' and (sys_platform != 'cygwin' and platform_python_implementation != 'PyPy')",
+    "watchfiles>=0.13",
+    "websockets>=10.4",
+]
+
+[project.urls]
+Source = "https://github.com/yinziyan1206/async-interpreters"
+
+[tool.hatch.version]
+path = "async_interpreters/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/async_interpreters",
+    "/tests",
+    "/requirements.txt",
+]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "FA", "UP"]
+ignore = ["B904", "B028", "UP031"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+
+[tool.mypy]
+warn_unused_ignores = true
+warn_redundant_casts = true
+show_error_codes = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+check_untyped_defs = true
+
+[tool.coverage.run]
+source_pkgs = ["async_interpreters"]
+
+[tool.coverage.report]
+precision = 2
+fail_under = 100
+show_missing = true
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "pragma: nocover",
+    "pragma: full coverage",
+    "if TYPE_CHECKING:",
+    "if typing.TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
