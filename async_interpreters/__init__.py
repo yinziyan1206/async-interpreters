@@ -1,6 +1,6 @@
 __author__ = "ziyan.yin"
 __date__ = "2024-10-16"
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 from .workers import WorkersPool
 
