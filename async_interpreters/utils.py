@@ -7,7 +7,7 @@ import inspect
 import marshal
 import pickle
 from collections.abc import Callable
-from types import FunctionType, ModuleType
+from types import FunctionType, MethodType, ModuleType
 
 
 def load_func(func: Callable) -> list[str]:
@@ -19,7 +19,7 @@ def load_func(func: Callable) -> list[str]:
         elif isinstance(obj, FunctionType) and obj.__module__ not in ("__main__", "builtins"):
             importers.append(f"from {obj.__module__} import {obj.__name__} as {name}")
     
-    if isinstance(func, FunctionType):
+    if isinstance(func, FunctionType | MethodType):
         if func.__closure__:
             raw_closure_contents = tuple(x.cell_contents for x in func.__closure__)
             importers.append("from types import CellType")
@@ -28,6 +28,9 @@ def load_func(func: Callable) -> list[str]:
             )
         importers.append(f"func_code = marshal.loads({marshal.dumps(func.__code__)})")  # type: ignore
         importers.append("func = FunctionType(func_code, locals(), closure=closure)")
+        if isinstance(func, MethodType):
+            importers.append("from types import MethodType")
+            importers.append("func = MethodType(func, self)")
     elif isinstance(func, functools.partial):
         importers.append("import functools")
         inner_importers = load_func(func.func)
@@ -37,6 +40,7 @@ def load_func(func: Callable) -> list[str]:
         importers.append("func = functools.partial(func, *func_args, **func_kwargs)")
     elif inner_func := getattr(func, "__call__", None):
         inner_importers = load_func(inner_func)
+        importers.append(f"self = pickle.loads({pickle.dumps(func)})")  # type: ignore
         importers.extend(inner_importers)
     else:
         raise TypeError(f"{func} is not callable")
