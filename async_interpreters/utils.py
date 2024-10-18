@@ -29,6 +29,7 @@ def load_func(func: Callable) -> list[str]:
         importers.append(f"func_code = marshal.loads({marshal.dumps(func.__code__)})")  # type: ignore
         importers.append("func = FunctionType(func_code, locals(), closure=closure)")
         if isinstance(func, MethodType):
+            importers.append(f"self = pickle.loads({pickle.dumps(func.__self__)})")  # type: ignore
             importers.append("from types import MethodType")
             importers.append("func = MethodType(func, self)")
     elif isinstance(func, functools.partial):
@@ -40,7 +41,6 @@ def load_func(func: Callable) -> list[str]:
         importers.append("func = functools.partial(func, *func_args, **func_kwargs)")
     elif inner_func := getattr(func, "__call__", None):
         inner_importers = load_func(inner_func)
-        importers.append(f"self = pickle.loads({pickle.dumps(func)})")  # type: ignore
         importers.extend(inner_importers)
     else:
         raise TypeError(f"{func} is not callable")
