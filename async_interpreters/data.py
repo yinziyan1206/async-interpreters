@@ -5,7 +5,7 @@ import dataclasses
 
 
 @dataclasses.dataclass
-class FunctionStructure:
+class FunctionParams:
     args: tuple | None = None
     kwargs: dict | None = None
     

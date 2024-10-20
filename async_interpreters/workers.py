@@ -14,7 +14,7 @@ from typing import Any
 from test.support import interpreters
 
 from async_interpreters import utils
-from async_interpreters.data import FunctionStructure
+from async_interpreters.data import FunctionParams
 from async_interpreters.params import CALL_CODE, ENV_CODE, SHARED_TYPES
 
 
@@ -52,7 +52,7 @@ class Worker:
                 self.run_string(self.raw_func)
                 self.raw_func = None
             shared = {
-                "func_data": pickle.dumps(FunctionStructure(args=args, kwargs=kwds))
+                "func_data": pickle.dumps(FunctionParams(args=args, kwargs=kwds))
             }
             
             code = """_run(func_data)"""
