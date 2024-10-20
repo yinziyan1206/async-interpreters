@@ -110,9 +110,10 @@ class WorkersPool:
             await asyncio.sleep(0.01)
         worker = self._pool.popleft()
         worker.import_func(func)
-        res = await worker(*args, **kwds)
-        self._pool.append(worker)
-        return res
+        try:
+            return await worker(*args, **kwds)
+        finally:
+            self._pool.append(worker)
 
     def close(self) -> None:
         for worker in self._pool:
