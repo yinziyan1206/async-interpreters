@@ -5,11 +5,14 @@ __date__ = "2024-10-17"
 import functools
 import inspect
 import marshal
+from pathlib import Path
 import pickle
 from collections.abc import Callable
+import sys
 from types import FunctionType, MethodType, ModuleType
 
 
+@functools.lru_cache()
 def load_func(func: Callable) -> list[str]:
     importers = []
     
@@ -46,3 +49,9 @@ def load_func(func: Callable) -> list[str]:
         raise TypeError(f"{func} is not callable")
 
     return importers
+
+
+def load_main() -> list[str]:
+    main_module = sys.modules["__main__"]
+    main_module_name = Path(getattr(main_module, "__file__", "")).stem
+    return [f"import {main_module_name} as __main__"]

@@ -17,11 +17,13 @@ ENV_CODE = D(
     sys.path[:] = {sys.path}
     
     sender = interpreters.SendChannel(_cid)
-    
+
+
     def _call(func, raw_data):
         func_data = pickle.loads(raw_data)
         res = func(*func_data.args, **func_data.kwargs)
-        sender.send_nowait(pickle.dumps(res))
+        if res is not None:
+            sender.send_nowait(pickle.dumps(res))
     """
 )
 
@@ -31,5 +33,6 @@ CALL_CODE = D(
         closure = None
         {importer}
         _call(func, raw_data)
+
     """
 )

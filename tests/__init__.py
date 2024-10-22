@@ -4,7 +4,7 @@ __date__ = "2024-10-16"
 
 from async_interpreters import WorkersPool
 
-workers = WorkersPool(max_size=10, timeout=5)
+workers = WorkersPool(max_size=10)
 
 
 def calc_add(a: int, b: int) -> int:
