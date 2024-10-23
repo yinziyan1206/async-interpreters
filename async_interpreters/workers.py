@@ -25,6 +25,8 @@ class Worker:
         
         self._init_interpreter()
         self.raw_func: str | None = None
+        self.sc = 0
+        self.results: dict[int, Any] = {}
     
     def run_string(self, code: str, **shared_kwds: SHARED_TYPES) -> Any:
         return interpreters._interpreters.run_string(self._interp.id, code, shared=shared_kwds)
@@ -43,21 +45,33 @@ class Worker:
             importer="\n    ".join(importers)
         )
         
-    def execute(self, params: FunctionParams) -> None:
+    def execute(self, params: FunctionParams) -> int:
         try:
+            self.sc += 1
             if self.raw_func:
                 self.run_string(self.raw_func)
                 self.raw_func = None
-            shared = {
-                "func_data": pickle.dumps(params)
+            shared: dict[str, SHARED_TYPES] = {
+                "func_data": pickle.dumps(params),
+                "sc": self.sc
             }
             
-            code = """_run(func_data)"""
+            code = f"""_run(sc, func_data)"""
             ret = self.run_string(code, **shared)
         except Exception:
             raise
         if ret:
             raise RuntimeError(ret)
+
+        return self.sc
+
+    async def recv(self, sc: int) -> None:
+         while sc not in self.results:
+            if raw_data := self.recevier.recv_nowait(default=None):
+                rc, res = pickle.loads(raw_data)
+                self.results[rc] = res
+                continue
+            await asyncio.sleep(0.01)
 
     def close(self) -> None:
         if self._interp.is_running():
@@ -93,13 +107,12 @@ class WorkersPool:
         worker = await self.acquire()
         worker.reload_func(func)
         try:
-            await anyio.to_thread.run_sync(
+            sc = await anyio.to_thread.run_sync(
                 worker.execute,
                 FunctionParams(args=args, kwargs=kwds)
             )
-            if res := worker.recevier.recv_nowait(default=None):
-                return pickle.loads(res)
-            return None
+            await worker.recv(sc)
+            return worker.results.pop(sc)
         finally:
             self.release(worker)
 

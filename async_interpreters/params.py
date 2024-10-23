@@ -19,20 +19,19 @@ ENV_CODE = D(
     sender = interpreters.SendChannel(_cid)
 
 
-    def _call(func, raw_data):
+    def _call(func, sc, raw_data):
         func_data = pickle.loads(raw_data)
         res = func(*func_data.args, **func_data.kwargs)
-        if res is not None:
-            sender.send_nowait(pickle.dumps(res))
+        sender.send_nowait(pickle.dumps((sc, res)))
     """
 )
 
 CALL_CODE = D(
     """
-    def _run(raw_data):
+    def _run(sc, raw_data):
         closure = None
         {importer}
-        _call(func, raw_data)
+        _call(func, sc, raw_data)
 
     """
 )
