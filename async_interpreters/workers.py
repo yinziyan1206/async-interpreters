@@ -21,18 +21,15 @@ class Worker:
     
     def __init__(self) -> None:
         self._interp = interpreters.create()
-        self.recevier, self.sender = interpreters.create_channel()
-        
         self._init_interpreter()
         self.raw_func: str | None = None
-        self.sc = 0
-        self.results: dict[int, Any] = {}
+        self.cid = None
     
     def run_string(self, code: str, **shared_kwds: SHARED_TYPES) -> Any:
         return interpreters._interpreters.run_string(self._interp.id, code, shared=shared_kwds)
     
     def _init_interpreter(self) -> None:
-        self.run_string(ENV_CODE, _cid=self.sender.id)
+        self.run_string(ENV_CODE)
     
     def reload_func(self, func: Callable) -> None:
         importers = utils.load_main()
@@ -45,33 +42,26 @@ class Worker:
             importer="\n    ".join(importers)
         )
         
-    def execute(self, params: FunctionParams) -> int:
+    def execute(self, params: FunctionParams) -> None:
         try:
-            self.sc += 1
             if self.raw_func:
                 self.run_string(self.raw_func)
                 self.raw_func = None
             shared: dict[str, SHARED_TYPES] = {
                 "func_data": pickle.dumps(params),
-                "sc": self.sc
+                "cid": self.cid
             }
             
-            code = f"""_run(sc, func_data)"""
+            code = f"""_run(cid, func_data)"""
             ret = self.run_string(code, **shared)
         except Exception:
             raise
         if ret:
             raise RuntimeError(ret)
-
-        return self.sc
-
-    async def recv(self, sc: int) -> None:
-         while sc not in self.results:
-            if raw_data := self.recevier.recv_nowait(default=None):
-                rc, res = pickle.loads(raw_data)
-                self.results[rc] = res
-                continue
-            await asyncio.sleep(0.01)
+    
+    def result(self) -> Any:
+        raw_data = interpreters.RecvChannel(self.cid).recv_nowait()
+        return pickle.loads(raw_data)
 
     def close(self) -> None:
         if self._interp.is_running():
@@ -98,21 +88,24 @@ class WorkersPool:
     async def acquire(self) -> Worker:
         while self.is_empty:
             await asyncio.sleep(0.01)
-        return self._pool.popleft()
+        worker = self._pool.popleft()
+        worker.cid = interpreters._channels.create()
+        return worker
     
     def release(self, worker: Worker) -> None:
+        interpreters._channels.destroy(worker.cid)
+        worker.cid = None
         self._pool.append(worker)
     
     async def run_sync(self, func: Callable, *args: Any, **kwds: Any) -> Any:
         worker = await self.acquire()
         worker.reload_func(func)
         try:
-            sc = await anyio.to_thread.run_sync(
+            await anyio.to_thread.run_sync(
                 worker.execute,
                 FunctionParams(args=args, kwargs=kwds)
             )
-            await worker.recv(sc)
-            return worker.results.pop(sc)
+            return worker.result()
         finally:
             self.release(worker)
 

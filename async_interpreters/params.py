@@ -15,23 +15,20 @@ ENV_CODE = D(
     from types import FunctionType
     
     sys.path[:] = {sys.path}
-    
-    sender = interpreters.SendChannel(_cid)
 
-
-    def _call(func, sc, raw_data):
+    def _call(func, raw_data):
         func_data = pickle.loads(raw_data)
-        res = func(*func_data.args, **func_data.kwargs)
-        sender.send_nowait(pickle.dumps((sc, res)))
+        return func(*func_data.args, **func_data.kwargs)
     """
 )
 
 CALL_CODE = D(
     """
-    def _run(sc, raw_data):
+    def _run(cid, raw_data):
+        sender = interpreters.SendChannel(cid)
         closure = None
         {importer}
-        _call(func, sc, raw_data)
-
+        res = _call(func, raw_data)
+        sender.send_nowait(pickle.dumps(res))
     """
 )
